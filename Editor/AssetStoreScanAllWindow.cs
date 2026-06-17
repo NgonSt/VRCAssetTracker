@@ -8,7 +8,7 @@ namespace VRCAssetTracker
 {
     public class AssetStoreScanAllWindow : EditorWindow
     {
-        [MenuItem("Tools/MyAssetManager/Scan Asset Store & Auto-Register")]
+        [MenuItem("Tools/VRCAssetTracker/Scan Asset Store & Auto-Register")]
         static void Open()
         {
             var w = GetWindow<AssetStoreScanAllWindow>("AS 一括登録");

@@ -10,7 +10,7 @@ namespace VRCAssetTracker
 {
     public class RegistrationWindow : EditorWindow
     {
-        [MenuItem("Tools/MyAssetManager/Register Product")]
+        [MenuItem("Tools/VRCAssetTracker/Register Product")]
         static void Open() => GetWindow<RegistrationWindow>("Register Product");
 
         enum Step { SelectDir, Parsed }

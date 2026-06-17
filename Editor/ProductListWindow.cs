@@ -11,7 +11,7 @@ namespace VRCAssetTracker
 {
     public class ProductListWindow : EditorWindow
     {
-        [MenuItem("Tools/MyAssetManager/Product List")]
+        [MenuItem("Tools/VRCAssetTracker/Product List")]
         static void Open() => GetWindow<ProductListWindow>("Booth Asset Linker");
 
         const float ThumbSize  = 64f;

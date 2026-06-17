@@ -8,7 +8,7 @@ namespace VRCAssetTracker
 {
     public class ScanAllWindow : EditorWindow
     {
-        [MenuItem("Tools/MyAssetManager/Scan All & Auto-Register")]
+        [MenuItem("Tools/VRCAssetTracker/Scan All & Auto-Register")]
         static void Open() => GetWindow<ScanAllWindow>("一括登録");
 
         class RowState

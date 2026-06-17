@@ -8,7 +8,7 @@ namespace VRCAssetTracker
 {
     public class AssetStoreScanResult
     {
-        // "{Publisher}/{PackageName}" 窶・stable unique key
+        // "{Publisher}/{PackageName}" — stable unique key
         public string CompositeId;
         public string DisplayName;
         public string PublisherName;
@@ -100,4 +100,3 @@ namespace VRCAssetTracker
         }
     }
 }
-

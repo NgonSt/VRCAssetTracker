@@ -25,4 +25,3 @@ namespace VRCAssetTracker
         public List<ProductData> products = new List<ProductData>();
     }
 }
-

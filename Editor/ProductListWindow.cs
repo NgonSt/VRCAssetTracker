@@ -30,7 +30,7 @@ namespace VRCAssetTracker
         readonly Dictionary<string, CacheEntry> _cache   = new Dictionary<string, CacheEntry>();
         readonly Dictionary<string, CacheEntry> _asCache = new Dictionary<string, CacheEntry>();
         Vector2 _scroll;
-        string  _pendingDelete;     // 蜑企勁縺ｯ繝輔Ξ繝ｼ繝譛ｫ蟆ｾ縺ｧ蜃ｦ逅・＠縺ｦ foreach 荳ｭ縺ｮ螟画峩繧帝∩縺代ｋ
+        string  _pendingDelete;     // 削除はフレーム末尾で処理して foreach 中の変更を避ける
         string  _pendingDeleteAs;
 
         static readonly HttpClient Http;
@@ -46,7 +46,7 @@ namespace VRCAssetTracker
         void OnFocus()   => Reload();
         void OnDestroy() => ClearCache();
 
-        // 笏笏 繝・・繧ｿ隱ｭ縺ｿ霎ｼ縺ｿ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── データ読み込み ────────────────────────────────────────────────────
 
         public void Reload()
         {
@@ -72,11 +72,12 @@ namespace VRCAssetTracker
             _asCache.Clear();
         }
 
-        // 笏笏 OnGUI 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── OnGUI ─────────────────────────────────────────────────────────────
 
         void OnGUI()
         {
-            // 蜑企勁縺ｮ蠕悟・逅・ｼ・oreach 縺ｮ螟悶〒陦後≧・・            if (_pendingDelete != null)
+            // 削除の後処理（foreach の外で行う）
+            if (_pendingDelete != null)
             {
                 if (_cache.TryGetValue(_pendingDelete, out var e) && e.Thumbnail != null)
                     DestroyImmediate(e.Thumbnail);
@@ -102,7 +103,7 @@ namespace VRCAssetTracker
             {
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.LabelField(
-                    "逋ｻ骭ｲ貂医∩蝠・刀縺後≠繧翫∪縺帙ｓ縲ゅ檎匳骭ｲ縲阪・繧ｿ繝ｳ縺九ｉ霑ｽ蜉縺励※縺上□縺輔＞縲・,
+                    "登録済み商品がありません。「登録」ボタンから追加してください。",
                     EditorStyles.centeredGreyMiniLabel);
                 GUILayout.FlexibleSpace();
                 return;
@@ -124,21 +125,21 @@ namespace VRCAssetTracker
             {
                 EditorGUILayout.LabelField("Booth Asset Linker", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("逋ｻ骭ｲ", EditorStyles.toolbarButton, GUILayout.Width(40)))
+                if (GUILayout.Button("登録", EditorStyles.toolbarButton, GUILayout.Width(40)))
                     GetWindow<RegistrationWindow>("Register Product");
-                if (GUILayout.Button("荳諡ｬ逋ｻ骭ｲ", EditorStyles.toolbarButton, GUILayout.Width(56)))
-                    GetWindow<ScanAllWindow>("荳諡ｬ逋ｻ骭ｲ");
-                if (GUILayout.Button("AS 逋ｻ骭ｲ", EditorStyles.toolbarButton, GUILayout.Width(52)))
+                if (GUILayout.Button("一括登録", EditorStyles.toolbarButton, GUILayout.Width(56)))
+                    GetWindow<ScanAllWindow>("一括登録");
+                if (GUILayout.Button("AS 登録", EditorStyles.toolbarButton, GUILayout.Width(52)))
                 {
-                    var w = GetWindow<AssetStoreScanAllWindow>("AS 荳諡ｬ逋ｻ骭ｲ");
+                    var w = GetWindow<AssetStoreScanAllWindow>("AS 一括登録");
                     w.ShowUtility();
                 }
-                if (GUILayout.Button("譖ｴ譁ｰ", EditorStyles.toolbarButton, GUILayout.Width(40)))
+                if (GUILayout.Button("更新", EditorStyles.toolbarButton, GUILayout.Width(40)))
                 {
                     ClearCache();
                     Reload();
                 }
-                if (GUILayout.Button("繧ｭ繝｣繝・す繝･繧ｯ繝ｪ繧｢", EditorStyles.toolbarButton, GUILayout.Width(84)))
+                if (GUILayout.Button("キャッシュクリア", EditorStyles.toolbarButton, GUILayout.Width(84)))
                 {
                     ThumbnailCache.ClearAll();
                     ClearCache();
@@ -147,7 +148,7 @@ namespace VRCAssetTracker
             }
         }
 
-        // 笏笏 蝠・刀陦・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── 商品行 ────────────────────────────────────────────────────────────
 
         void DrawProductRow(ProductData product)
         {
@@ -160,22 +161,24 @@ namespace VRCAssetTracker
             if (Event.current.type == EventType.Repaint)
                 DrawRowContent(row, product, entry);
 
-            // 鬟帙・蜈亥､画峩繝懊ち繝ｳ・亥承荳奇ｼ・            var rePickRect = new Rect(row.xMax - 48f, row.y + 4f, 20f, 18f);
-            if (GUI.Button(rePickRect, "窶ｦ", EditorStyles.miniButton))
+            // 飛び先変更ボタン（右上）
+            var rePickRect = new Rect(row.xMax - 48f, row.y + 4f, 20f, 18f);
+            if (GUI.Button(rePickRect, "…", EditorStyles.miniButton))
                 RePickTargetDir(product);
 
-            // 蜑企勁繝懊ち繝ｳ・亥承荳奇ｼ・            var deleteRect = new Rect(row.xMax - 24f, row.y + 4f, 20f, 18f);
-            if (GUI.Button(deleteRect, "ﾃ・, EditorStyles.miniButton))
+            // 削除ボタン（右上）
+            var deleteRect = new Rect(row.xMax - 24f, row.y + 4f, 20f, 18f);
+            if (GUI.Button(deleteRect, "×", EditorStyles.miniButton))
             {
-                if (EditorUtility.DisplayDialog("蜑企勁遒ｺ隱・,
-                    $"蝠・刀 {product.boothItemId} 縺ｮ逋ｻ骭ｲ繧定ｧ｣髯､縺励∪縺吶°・・, "蜑企勁", "繧ｭ繝｣繝ｳ繧ｻ繝ｫ"))
+                if (EditorUtility.DisplayDialog("削除確認",
+                    $"商品 {product.boothItemId} の登録を解除しますか？", "削除", "キャンセル"))
                 {
                     _pendingDelete = product.boothItemId;
                     Repaint();
                 }
             }
 
-            // 陦後け繝ｪ繝・け 竊・Ping
+            // 行クリック → Ping
             if (Event.current.type == EventType.MouseDown
                 && row.Contains(Event.current.mousePosition)
                 && !rePickRect.Contains(Event.current.mousePosition)
@@ -185,14 +188,15 @@ namespace VRCAssetTracker
                 Event.current.Use();
             }
 
-            // 蛹ｺ蛻・ｊ邱・            EditorGUI.DrawRect(
+            // 区切り線
+            EditorGUI.DrawRect(
                 new Rect(row.x, row.yMax - 1f, row.width, 1f),
                 new Color(0.2f, 0.2f, 0.2f));
         }
 
         void DrawRowContent(Rect row, ProductData product, CacheEntry entry)
         {
-            // 繧ｵ繝繝阪う繝ｫ
+            // サムネイル
             var thumbRect = new Rect(
                 row.x + RowPadding,
                 row.y + (RowHeight - ThumbSize) / 2f,
@@ -201,11 +205,12 @@ namespace VRCAssetTracker
             if (entry?.Thumbnail != null)
                 GUI.DrawTexture(thumbRect, entry.Thumbnail, ScaleMode.ScaleToFit);
             else if (entry?.Loading == true)
-                GUI.Label(thumbRect, "窶ｦ", EditorStyles.centeredGreyMiniLabel);
+                GUI.Label(thumbRect, "…", EditorStyles.centeredGreyMiniLabel);
             else
                 EditorGUI.DrawRect(thumbRect, new Color(0.22f, 0.22f, 0.22f));
 
-            // 繝・く繧ｹ繝・            float tx = thumbRect.xMax + RowPadding;
+            // テキスト
+            float tx = thumbRect.xMax + RowPadding;
             float tw = row.width - tx - 54f;
 
             string name = entry?.ProductName ?? $"ID: {product.boothItemId}";
@@ -214,16 +219,16 @@ namespace VRCAssetTracker
             GUI.Label(new Rect(tx, row.y + 46f, tw, 16f), product.targetDirectory, EditorStyles.miniLabel);
         }
 
-        // 笏笏 繝輔か繝ｫ繝 Ping 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── フォルダ Ping ─────────────────────────────────────────────────────
 
         void PingProduct(ProductData product)
         {
             if (!AssetDatabase.IsValidFolder(product.targetDirectory))
             {
                 bool pick = EditorUtility.DisplayDialog(
-                    "繝輔か繝ｫ繝縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ",
-                    $"縲鶏product.targetDirectory}縲阪′蟄伜惠縺励∪縺帙ｓ縲・n驕ｸ縺ｳ逶ｴ縺励∪縺吶°・・,
-                    "驕ｸ縺ｳ逶ｴ縺・, "繧ｭ繝｣繝ｳ繧ｻ繝ｫ");
+                    "フォルダが見つかりません",
+                    $"「{product.targetDirectory}」が存在しません。\n選び直しますか？",
+                    "選び直す", "キャンセル");
                 if (pick) RePickTargetDir(product);
                 return;
             }
@@ -235,7 +240,7 @@ namespace VRCAssetTracker
 
         void RePickTargetDir(ProductData product)
         {
-            string picked = EditorUtility.OpenFolderPanel("譁ｰ縺励＞鬟帙・蜈医ｒ驕ｸ謚・, "Assets", "");
+            string picked = EditorUtility.OpenFolderPanel("新しい飛び先を選択", "Assets", "");
             if (string.IsNullOrEmpty(picked)) return;
 
             string projectRoot = Path.GetDirectoryName(Application.dataPath)
@@ -244,15 +249,15 @@ namespace VRCAssetTracker
 
             if (!norm.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
             {
-                EditorUtility.DisplayDialog("繧ｨ繝ｩ繝ｼ",
-                    "繝励Ο繧ｸ繧ｧ繧ｯ繝亥・縺ｮ繝輔か繝ｫ繝繧帝∈謚槭＠縺ｦ縺上□縺輔＞縲・, "OK");
+                EditorUtility.DisplayDialog("エラー",
+                    "プロジェクト内のフォルダを選択してください。", "OK");
                 return;
             }
 
             string rel = norm.Substring(projectRoot.Length);
             if (!AssetDatabase.IsValidFolder(rel))
             {
-                EditorUtility.DisplayDialog("繧ｨ繝ｩ繝ｼ", $"譛牙柑縺ｪ繝輔か繝ｫ繝縺ｧ縺ｯ縺ゅｊ縺ｾ縺帙ｓ: {rel}", "OK");
+                EditorUtility.DisplayDialog("エラー", $"有効なフォルダではありません: {rel}", "OK");
                 return;
             }
 
@@ -262,7 +267,7 @@ namespace VRCAssetTracker
             Repaint();
         }
 
-        // 笏笏 Asset Store 蝠・刀陦・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── Asset Store 商品行 ────────────────────────────────────────────────
 
         void DrawAsProductRow(AssetStoreProductData product)
         {
@@ -276,14 +281,14 @@ namespace VRCAssetTracker
                 DrawAsRowContent(row, product, entry);
 
             var rePickRect = new Rect(row.xMax - 48f, row.y + 4f, 20f, 18f);
-            if (GUI.Button(rePickRect, "窶ｦ", EditorStyles.miniButton))
+            if (GUI.Button(rePickRect, "…", EditorStyles.miniButton))
                 RePickAsTargetDir(product);
 
             var deleteRect = new Rect(row.xMax - 24f, row.y + 4f, 20f, 18f);
-            if (GUI.Button(deleteRect, "ﾃ・, EditorStyles.miniButton))
+            if (GUI.Button(deleteRect, "×", EditorStyles.miniButton))
             {
-                if (EditorUtility.DisplayDialog("蜑企勁遒ｺ隱・,
-                    $"縲鶏product.displayName}縲阪・逋ｻ骭ｲ繧定ｧ｣髯､縺励∪縺吶°・・, "蜑企勁", "繧ｭ繝｣繝ｳ繧ｻ繝ｫ"))
+                if (EditorUtility.DisplayDialog("削除確認",
+                    $"「{product.displayName}」の登録を解除しますか？", "削除", "キャンセル"))
                 {
                     _pendingDeleteAs = product.compositeId;
                     Repaint();
@@ -314,7 +319,7 @@ namespace VRCAssetTracker
             if (entry?.Thumbnail != null)
                 GUI.DrawTexture(thumbRect, entry.Thumbnail, ScaleMode.ScaleToFit);
             else if (entry?.Loading == true)
-                GUI.Label(thumbRect, "窶ｦ", EditorStyles.centeredGreyMiniLabel);
+                GUI.Label(thumbRect, "…", EditorStyles.centeredGreyMiniLabel);
             else
                 EditorGUI.DrawRect(thumbRect, new Color(0.22f, 0.22f, 0.22f));
 
@@ -331,9 +336,9 @@ namespace VRCAssetTracker
             if (!AssetDatabase.IsValidFolder(product.targetDirectory))
             {
                 bool pick = EditorUtility.DisplayDialog(
-                    "繝輔か繝ｫ繝縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ",
-                    $"縲鶏product.targetDirectory}縲阪′蟄伜惠縺励∪縺帙ｓ縲・n驕ｸ縺ｳ逶ｴ縺励∪縺吶°・・,
-                    "驕ｸ縺ｳ逶ｴ縺・, "繧ｭ繝｣繝ｳ繧ｻ繝ｫ");
+                    "フォルダが見つかりません",
+                    $"「{product.targetDirectory}」が存在しません。\n選び直しますか？",
+                    "選び直す", "キャンセル");
                 if (pick) RePickAsTargetDir(product);
                 return;
             }
@@ -345,7 +350,7 @@ namespace VRCAssetTracker
 
         void RePickAsTargetDir(AssetStoreProductData product)
         {
-            string picked = EditorUtility.OpenFolderPanel("譁ｰ縺励＞鬟帙・蜈医ｒ驕ｸ謚・, "Assets", "");
+            string picked = EditorUtility.OpenFolderPanel("新しい飛び先を選択", "Assets", "");
             if (string.IsNullOrEmpty(picked)) return;
 
             string projectRoot = Path.GetDirectoryName(Application.dataPath)
@@ -354,15 +359,15 @@ namespace VRCAssetTracker
 
             if (!norm.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
             {
-                EditorUtility.DisplayDialog("繧ｨ繝ｩ繝ｼ",
-                    "繝励Ο繧ｸ繧ｧ繧ｯ繝亥・縺ｮ繝輔か繝ｫ繝繧帝∈謚槭＠縺ｦ縺上□縺輔＞縲・, "OK");
+                EditorUtility.DisplayDialog("エラー",
+                    "プロジェクト内のフォルダを選択してください。", "OK");
                 return;
             }
 
             string rel = norm.Substring(projectRoot.Length);
             if (!AssetDatabase.IsValidFolder(rel))
             {
-                EditorUtility.DisplayDialog("繧ｨ繝ｩ繝ｼ", $"譛牙柑縺ｪ繝輔か繝ｫ繝縺ｧ縺ｯ縺ゅｊ縺ｾ縺帙ｓ: {rel}", "OK");
+                EditorUtility.DisplayDialog("エラー", $"有効なフォルダではありません: {rel}", "OK");
                 return;
             }
 
@@ -372,7 +377,7 @@ namespace VRCAssetTracker
             Repaint();
         }
 
-        // 笏笏 Asset Store 繧｢繧､繧ｳ繝ｳ隱ｭ縺ｿ霎ｼ縺ｿ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── Asset Store アイコン読み込み ──────────────────────────────────────
 
         async Task LoadAssetStoreIconAsync(string compositeId, string displayName, string localPackagePath)
         {
@@ -421,7 +426,7 @@ namespace VRCAssetTracker
             };
         }
 
-        // 笏笏 Booth 諠・ｱ蜿門ｾ・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── Booth 情報取得 ────────────────────────────────────────────────────
 
         async Task FetchBoothInfoAsync(string boothItemId)
         {
@@ -431,7 +436,8 @@ namespace VRCAssetTracker
             bool   hasImg   = ThumbnailCache.TryLoad(key,     out var cachedImg);
             bool   hasMeta  = ThumbnailCache.TryLoadMeta(key, out var cachedTitle);
 
-            // 螳悟・繧ｭ繝｣繝・す繝･繝偵ャ繝茨ｼ唏TTP荳崎ｦ・            if (hasImg && hasMeta)
+            // 完全キャッシュヒット：HTTP不要
+            if (hasImg && hasMeta)
             {
                 EditorApplication.delayCall += () =>
                 {
@@ -448,7 +454,8 @@ namespace VRCAssetTracker
                 return;
             }
 
-            // 驛ｨ蛻・く繝｣繝・す繝･ or 譛ｪ繧ｭ繝｣繝・す繝･・唏TML蜿門ｾ・            try
+            // 部分キャッシュ or 未キャッシュ：HTML取得
+            try
             {
                 string html  = await Http.GetStringAsync($"https://booth.pm/ja/items/{boothItemId}");
                 string title = ParseOgMeta(html, "og:title");
@@ -489,7 +496,8 @@ namespace VRCAssetTracker
                 Debug.LogWarning($"[AssetLinker] Booth fetch failed ({boothItemId}): {ex.Message}");
                 EditorApplication.delayCall += () =>
                 {
-                    // 逕ｻ蜒上く繝｣繝・す繝･縺後≠繧後・陦ｨ遉ｺ繧堤ｶｭ謖√☆繧・                    Texture2D thumb = null;
+                    // 画像キャッシュがあれば表示を維持する
+                    Texture2D thumb = null;
                     if (cachedImg != null)
                     {
                         thumb = new Texture2D(2, 2);
@@ -498,7 +506,7 @@ namespace VRCAssetTracker
                     _cache[boothItemId] = new CacheEntry
                     {
                         Thumbnail   = thumb,
-                        ProductName = cachedTitle ?? "(蜿門ｾ怜､ｱ謨・",
+                        ProductName = cachedTitle ?? "(取得失敗)",
                         Loading     = false
                     };
                     Repaint();
@@ -516,11 +524,11 @@ namespace VRCAssetTracker
                 RegexOptions.IgnoreCase);
             if (m.Success) return System.Net.WebUtility.HtmlDecode(m.Groups[1].Value);
 
-            // 螻樊ｧ縺ｮ鬆・ｺ上′騾・・蝣ｴ蜷・            m = Regex.Match(html,
+            // 属性の順序が逆の場合
+            m = Regex.Match(html,
                 $@"<meta[^>]+content=""([^""]+)""[^>]+property=""{pat}""",
                 RegexOptions.IgnoreCase);
             return m.Success ? System.Net.WebUtility.HtmlDecode(m.Groups[1].Value) : null;
         }
     }
 }
-

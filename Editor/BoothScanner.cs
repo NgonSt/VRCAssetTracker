@@ -11,10 +11,10 @@ namespace VRCAssetTracker
     public class ScanResult
     {
         public string            BoothItemId;
-        public List<PackageData> Packages;        // JSON 菫晏ｭ倡畑
-        public int               TotalFiles;      // 繝代ャ繧ｱ繝ｼ繧ｸ讓ｪ譁ｭ繝ｦ繝九・繧ｯ謨ｰ
-        public List<string>      MatchedFiles;    // 繝励Ο繧ｸ繧ｧ繧ｯ繝医↓蟄伜惠縺吶ｋ繝代せ縺ｮ縺ｿ
-        public string            SuggestedTargetDir; // "" = 閾ｪ蜍墓ｱｺ螳壻ｸ榊庄
+        public List<PackageData> Packages;        // JSON 保存用
+        public int               TotalFiles;      // パッケージ横断ユニーク数
+        public List<string>      MatchedFiles;    // プロジェクトに存在するパスのみ
+        public string            SuggestedTargetDir; // "" = 自動決定不可
     }
 
     public static class BoothScanner
@@ -22,7 +22,9 @@ namespace VRCAssetTracker
         static readonly Regex BoothDirPattern = new Regex(@"^b(\d+)$");
 
         /// <summary>
-        /// boothRoot 驟堺ｸ九・ b{ID} 繝・ぅ繝ｬ繧ｯ繝医Μ繧貞・繧ｹ繧ｭ繝｣繝ｳ縺吶ｋ縲・        /// alreadyRegisteredIds 縺ｫ蜷ｫ縺ｾ繧後ｋ蝠・刀縺ｯ繧ｹ繧ｭ繝・・縲・        /// </summary>
+        /// boothRoot 配下の b{ID} ディレクトリを全スキャンする。
+        /// alreadyRegisteredIds に含まれる商品はスキップ。
+        /// </summary>
         public static List<ScanResult> ScanAll(
             string               boothRoot,
             HashSet<string>      alreadyRegisteredIds,
@@ -99,13 +101,16 @@ namespace VRCAssetTracker
         }
 
         /// <summary>
-        /// matchedFiles 縺ｮ荳ｭ縺ｧ譛繧よ髪驟咲噪縺ｪ Assets/X[/Y] 繧定ｿ斐☆縲・        /// 隕九▽縺九ｉ縺ｪ縺・ｴ蜷医・ ""縲・        /// </summary>
+        /// matchedFiles の中で最も支配的な Assets/X[/Y] を返す。
+        /// 見つからない場合は ""。
+        /// </summary>
         public static string SuggestTargetDir(List<string> matchedFiles)
         {
             if (matchedFiles == null || matchedFiles.Count == 0)
                 return "";
 
-            // 蜷・ヵ繧｡繧､繝ｫ縺ｮ蜈ｨ逾門・繝・ぅ繝ｬ繧ｯ繝医Μ縺ｫ蜃ｺ迴ｾ蝗樊焚繧貞刈邂・            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            // 各ファイルの全祖先ディレクトリに出現回数を加算
+            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (var file in matchedFiles)
             {
                 string d = Path.GetDirectoryName(file)?.Replace('\\', '/');
@@ -121,13 +126,15 @@ namespace VRCAssetTracker
             if (counts.Count == 0)
                 return "";
 
-            // 蜃ｺ迴ｾ謨ｰ髯埼・竊・豺ｱ縺墓・鬆・ｼ域ｵ・＞譁ｹ蜆ｪ蜈茨ｼ・竊・霎樊嶌鬆・            string best = counts
+            // 出現数降順 → 深さ昇順（浅い方優先） → 辞書順
+            string best = counts
                 .OrderByDescending(kv => kv.Value)
                 .ThenBy(kv => kv.Key.Count(c => c == '/'))
                 .ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
                 .First().Key;
 
-            // AssetDatabase 縺ｧ螳溷惠遒ｺ隱搾ｼ帙↑縺代ｌ縺ｰ隕ｪ縺ｸ驕｡繧・            while (!string.IsNullOrEmpty(best) && best != "Assets")
+            // AssetDatabase で実在確認；なければ親へ遡る
+            while (!string.IsNullOrEmpty(best) && best != "Assets")
             {
                 if (AssetDatabase.IsValidFolder(best))
                     return best;
@@ -145,4 +152,3 @@ namespace VRCAssetTracker
         }
     }
 }
-

@@ -6,7 +6,7 @@ namespace VRCAssetTracker
     [Serializable]
     public class AssetStoreProductData
     {
-        // "{Publisher}/{PackageName}" 窶・unique key
+        // "{Publisher}/{PackageName}" — unique key
         public string compositeId;
         public string displayName;
         public string publisherName;
@@ -23,4 +23,3 @@ namespace VRCAssetTracker
         public List<AssetStoreProductData> products = new List<AssetStoreProductData>();
     }
 }
-

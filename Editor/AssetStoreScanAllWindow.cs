@@ -11,7 +11,7 @@ namespace VRCAssetTracker
         [MenuItem("Tools/MyAssetManager/Scan Asset Store & Auto-Register")]
         static void Open()
         {
-            var w = GetWindow<AssetStoreScanAllWindow>("AS 荳諡ｬ逋ｻ骭ｲ");
+            var w = GetWindow<AssetStoreScanAllWindow>("AS 一括登録");
             w.ShowUtility();
         }
 
@@ -35,7 +35,7 @@ const float ColCheck  = 20f;
 
         int CheckedCount => _rowStates.Count(s => s.Checked);
 
-        // 笏笏 OnGUI 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── OnGUI ─────────────────────────────────────────────────────────────
 
         void OnGUI()
         {
@@ -51,8 +51,8 @@ const float ColCheck  = 20f;
             {
                 EditorGUILayout.Space(8);
                 EditorGUILayout.HelpBox(
-                    "譛ｪ逋ｻ骭ｲ縺ｮ繝代ャ繧ｱ繝ｼ繧ｸ縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ縺ｧ縺励◆縲・n" +
-                    "縺吶∋縺ｦ逋ｻ骭ｲ貂医∩縺九√・繝ｭ繧ｸ繧ｧ繧ｯ繝医↓菴輔ｂ Import 縺輔ｌ縺ｦ縺・∪縺帙ｓ縲・,
+                    "未登録のパッケージが見つかりませんでした。\n" +
+                    "すべて登録済みか、プロジェクトに何も Import されていません。",
                     MessageType.Info);
                 return;
             }
@@ -62,7 +62,7 @@ const float ColCheck  = 20f;
             DrawFooter();
         }
 
-        // 笏笏 繝・・繝ｫ繝舌・ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── ツールバー ────────────────────────────────────────────────────────
 
         void DrawToolbar()
         {
@@ -71,64 +71,64 @@ const float ColCheck  = 20f;
                 EditorGUILayout.LabelField("AS Root:", GUILayout.Width(52));
                 EditorGUILayout.LabelField(
                     AssetLinkerSettings.AssetStoreLibraryRoot, EditorStyles.miniLabel);
-                if (GUILayout.Button("窶ｦ", EditorStyles.toolbarButton, GUILayout.Width(24)))
+                if (GUILayout.Button("…", EditorStyles.toolbarButton, GUILayout.Width(24)))
                     BrowseAssetStoreRoot();
                 GUILayout.FlexibleSpace();
 
-                if (GUILayout.Button(_scanned ? "蜀阪せ繧ｭ繝｣繝ｳ" : "繧ｹ繧ｭ繝｣繝ｳ髢句ｧ・, EditorStyles.toolbarButton, GUILayout.Width(72)))
+                if (GUILayout.Button(_scanned ? "再スキャン" : "スキャン開始", EditorStyles.toolbarButton, GUILayout.Width(72)))
                     RunScan();
 
                 int n = CheckedCount;
                 using (new EditorGUI.DisabledScope(n == 0))
                 {
-                    if (GUILayout.Button($"驕ｸ謚槭＠縺溷膚蜩√ｒ逋ｻ骭ｲ ({n} 莉ｶ)",
+                    if (GUILayout.Button($"選択した商品を登録 ({n} 件)",
                             EditorStyles.toolbarButton, GUILayout.Width(148)))
                         RegisterChecked();
                 }
             }
         }
 
-        // 笏笏 繧ｹ繧ｭ繝｣繝ｳ蜑阪・隱ｬ譏・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── スキャン前の説明 ──────────────────────────────────────────────────
 
         void DrawPrescanBody()
         {
             EditorGUILayout.Space(8);
             EditorGUILayout.HelpBox(
-                "Unity Asset Store 縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｭ繝｣繝・す繝･・・sset Store-5.x・峨ｒ繧ｹ繧ｭ繝｣繝ｳ縺励―n" +
-                "繝励Ο繧ｸ繧ｧ繧ｯ繝医↓ Import 貂医∩縺ｮ繝代ャ繧ｱ繝ｼ繧ｸ繧定・蜍墓､懷・縺励∪縺吶・n\n" +
-                "縲後せ繧ｭ繝｣繝ｳ髢句ｧ九阪・繧ｿ繝ｳ繧呈款縺励※縺上□縺輔＞縲・,
+                "Unity Asset Store のローカルキャッシュ（Asset Store-5.x）をスキャンし、\n" +
+                "プロジェクトに Import 済みのパッケージを自動検出します。\n\n" +
+                "「スキャン開始」ボタンを押してください。",
                 MessageType.Info);
 
             if (!Directory.Exists(AssetLinkerSettings.AssetStoreLibraryRoot))
             {
                 EditorGUILayout.Space(4);
                 EditorGUILayout.HelpBox(
-                    $"Asset Store Root 縺悟ｭ伜惠縺励∪縺帙ｓ:\n{AssetLinkerSettings.AssetStoreLibraryRoot}\n\n" +
-                    "繝・・繝ｫ繝舌・縺ｮ縲娯ｦ縲阪・繧ｿ繝ｳ縺ｧ豁｣縺励＞繝輔か繝ｫ繝繧呈欠螳壹＠縺ｦ縺上□縺輔＞縲・n" +
-                    "騾壼ｸｸ縺ｯ  %APPDATA%\\Unity\\Asset Store-5.x  縺ｧ縺吶・,
+                    $"Asset Store Root が存在しません:\n{AssetLinkerSettings.AssetStoreLibraryRoot}\n\n" +
+                    "ツールバーの「…」ボタンで正しいフォルダを指定してください。\n" +
+                    "通常は  %APPDATA%\\Unity\\Asset Store-5.x  です。",
                     MessageType.Error);
-                if (GUILayout.Button("繝輔か繝ｫ繝繧貞盾辣ｧ縺励※險ｭ螳壺ｦ", GUILayout.Height(28)))
+                if (GUILayout.Button("フォルダを参照して設定…", GUILayout.Height(28)))
                     BrowseAssetStoreRoot();
             }
         }
 
-        // 笏笏 繝倥ャ繝陦・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── ヘッダ行 ─────────────────────────────────────────────────────────
 
         void DrawHeaderRow()
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 GUILayout.Space(ColCheck + 4);
-                EditorGUILayout.LabelField("繝代ヶ繝ｪ繝・す繝｣繝ｼ", EditorStyles.miniLabel, GUILayout.Width(ColPubl));
-                EditorGUILayout.LabelField("繝代ャ繧ｱ繝ｼ繧ｸ蜷・,   EditorStyles.miniLabel, GUILayout.ExpandWidth(true));
-                EditorGUILayout.LabelField("繝槭ャ繝・,         EditorStyles.miniLabel, GUILayout.Width(ColMatch));
-                EditorGUILayout.LabelField("繧ｿ繝ｼ繧ｲ繝・ヨ繝・ぅ繝ｬ繧ｯ繝医Μ", EditorStyles.miniLabel,
+                EditorGUILayout.LabelField("パブリッシャー", EditorStyles.miniLabel, GUILayout.Width(ColPubl));
+                EditorGUILayout.LabelField("パッケージ名",   EditorStyles.miniLabel, GUILayout.ExpandWidth(true));
+                EditorGUILayout.LabelField("マッチ",         EditorStyles.miniLabel, GUILayout.Width(ColMatch));
+                EditorGUILayout.LabelField("ターゲットディレクトリ", EditorStyles.miniLabel,
                     GUILayout.ExpandWidth(true));
                 GUILayout.Space(ColBrowse);
             }
         }
 
-        // 笏笏 邨先棡繝ｪ繧ｹ繝・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── 結果リスト ────────────────────────────────────────────────────────
 
         void DrawResultList()
         {
@@ -166,7 +166,7 @@ const float ColCheck  = 20f;
             }
         }
 
-        // 笏笏 繝輔ャ繧ｿ繝ｼ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── フッター ─────────────────────────────────────────────────────────
 
         void DrawFooter()
         {
@@ -176,37 +176,37 @@ const float ColCheck  = 20f;
                 if (_parseErrors.Count > 0)
                 {
                     EditorGUILayout.LabelField(
-                        $"繝代・繧ｹ繧ｨ繝ｩ繝ｼ: {_parseErrors.Count} 莉ｶ",
+                        $"パースエラー: {_parseErrors.Count} 件",
                         EditorStyles.miniLabel);
-                    if (GUILayout.Button("隧ｳ邏ｰ", EditorStyles.miniButton, GUILayout.Width(40)))
+                    if (GUILayout.Button("詳細", EditorStyles.miniButton, GUILayout.Width(40)))
                         EditorUtility.DisplayDialog(
-                            "繝代・繧ｹ繧ｨ繝ｩ繝ｼ荳隕ｧ",
+                            "パースエラー一覧",
                             string.Join("\n", _parseErrors),
-                            "髢峨§繧・);
+                            "閉じる");
                 }
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("蜈ｨ驕ｸ謚・, EditorStyles.miniButton, GUILayout.Width(48)))
+                if (GUILayout.Button("全選択", EditorStyles.miniButton, GUILayout.Width(48)))
                     foreach (var (r, s) in _results.Zip(_rowStates, (r, s) => (r, s)))
                         if (r.MatchedFiles.Count > 0) s.Checked = true;
-                if (GUILayout.Button("蜈ｨ隗｣髯､", EditorStyles.miniButton, GUILayout.Width(48)))
+                if (GUILayout.Button("全解除", EditorStyles.miniButton, GUILayout.Width(48)))
                     foreach (var s in _rowStates) s.Checked = false;
             }
         }
 
-        // 笏笏 繝輔か繝ｫ繝蜿ら・・医Ν繝ｼ繝茨ｼ・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── フォルダ参照（ルート） ────────────────────────────────────────────
 
         void BrowseAssetStoreRoot()
         {
             string current = AssetLinkerSettings.AssetStoreLibraryRoot;
             string start   = Directory.Exists(current) ? current : "";
-            string picked  = EditorUtility.OpenFolderPanel("Asset Store 繧ｭ繝｣繝・す繝･繝輔か繝ｫ繝繧帝∈謚・, start, "");
+            string picked  = EditorUtility.OpenFolderPanel("Asset Store キャッシュフォルダを選択", start, "");
             if (string.IsNullOrEmpty(picked)) return;
             AssetLinkerSettings.AssetStoreLibraryRoot = picked;
             _scanned = false;
             Repaint();
         }
 
-        // 笏笏 繧ｹ繧ｭ繝｣繝ｳ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── スキャン ──────────────────────────────────────────────────────────
 
         void RunScan()
         {
@@ -223,7 +223,7 @@ const float ColCheck  = 20f;
                 _results = AssetStoreScanner.ScanAll(
                     AssetLinkerSettings.AssetStoreLibraryRoot,
                     registeredIds,
-                    (label, t) => EditorUtility.DisplayProgressBar("繧ｹ繧ｭ繝｣繝ｳ荳ｭ...", label, t),
+                    (label, t) => EditorUtility.DisplayProgressBar("スキャン中...", label, t),
                     _parseErrors);
             }
             finally
@@ -241,7 +241,7 @@ const float ColCheck  = 20f;
             Repaint();
         }
 
-        // 笏笏 荳諡ｬ逋ｻ骭ｲ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── 一括登録 ─────────────────────────────────────────────────────────
 
         void RegisterChecked()
         {
@@ -281,18 +281,18 @@ const float ColCheck  = 20f;
 
             if (anyError) Repaint();
 
-            string msg = saved > 0 ? $"{saved} 莉ｶ繧堤匳骭ｲ縺励∪縺励◆縲・ : "";
+            string msg = saved > 0 ? $"{saved} 件を登録しました。" : "";
             if (skipped > 0)
-                msg += $"\n{skipped} 莉ｶ縺ｯ繧ｿ繝ｼ繧ｲ繝・ヨ縺梧悴險ｭ螳壹・縺溘ａ繧ｹ繧ｭ繝・・縺励∪縺励◆・郁ｵ､縺上ワ繧､繝ｩ繧､繝茨ｼ峨・;
+                msg += $"\n{skipped} 件はターゲットが未設定のためスキップしました（赤くハイライト）。";
 
-            EditorUtility.DisplayDialog("逋ｻ骭ｲ螳御ｺ・, msg.Trim(), "OK");
+            EditorUtility.DisplayDialog("登録完了", msg.Trim(), "OK");
         }
 
-        // 笏笏 繝輔か繝ｫ繝蜿ら・ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+        // ── フォルダ参照 ─────────────────────────────────────────────────────
 
         void BrowseTargetDir(int i)
         {
-            string picked = EditorUtility.OpenFolderPanel("繧ｿ繝ｼ繧ｲ繝・ヨ繝輔か繝ｫ繝繧帝∈謚・, "Assets", "");
+            string picked = EditorUtility.OpenFolderPanel("ターゲットフォルダを選択", "Assets", "");
             if (string.IsNullOrEmpty(picked)) return;
 
             string projectRoot = Path.GetDirectoryName(Application.dataPath)
@@ -301,16 +301,16 @@ const float ColCheck  = 20f;
 
             if (!norm.StartsWith(projectRoot, System.StringComparison.OrdinalIgnoreCase))
             {
-                EditorUtility.DisplayDialog("繧ｨ繝ｩ繝ｼ",
-                    "繝励Ο繧ｸ繧ｧ繧ｯ繝亥・縺ｮ繝輔か繝ｫ繝繧帝∈謚槭＠縺ｦ縺上□縺輔＞縲・, "OK");
+                EditorUtility.DisplayDialog("エラー",
+                    "プロジェクト内のフォルダを選択してください。", "OK");
                 return;
             }
 
             string rel = norm.Substring(projectRoot.Length);
             if (!AssetDatabase.IsValidFolder(rel))
             {
-                EditorUtility.DisplayDialog("繧ｨ繝ｩ繝ｼ",
-                    $"譛牙柑縺ｪ繝輔か繝ｫ繝縺ｧ縺ｯ縺ゅｊ縺ｾ縺帙ｓ: {rel}", "OK");
+                EditorUtility.DisplayDialog("エラー",
+                    $"有効なフォルダではありません: {rel}", "OK");
                 return;
             }
 
@@ -320,4 +320,3 @@ const float ColCheck  = 20f;
         }
     }
 }
-

@@ -27,4 +27,3 @@ namespace VRCAssetTracker
                 "Unity", "Asset Store-5.x");
     }
 }
-

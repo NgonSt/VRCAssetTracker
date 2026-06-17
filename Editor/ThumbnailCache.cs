@@ -47,4 +47,3 @@ namespace VRCAssetTracker
         public static string AsKey(string compositeId)        => "as_" + compositeId.Replace('/', '_').Replace('\\', '_');
     }
 }
-

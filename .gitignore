@@ -20,5 +20,8 @@
 .DS_Store
 Thumbs.db
 
+# Build output
+*.unitypackage
+
 # Claude Code
 .claude/

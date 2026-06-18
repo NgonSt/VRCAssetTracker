@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace MyAssetManager
+namespace VRCAssetTracker
 {
     public class UsedProductsWindow : EditorWindow
     {
@@ -117,7 +117,6 @@ namespace MyAssetManager
             _searchedObjectName = root != null ? root.name : string.Empty;
             if (root == null) return;
 
-            // Collect all asset paths referenced in the GameObject hierarchy
             var assetUsages = new Dictionary<string, List<UsageEntry>>(System.StringComparer.OrdinalIgnoreCase);
 
             foreach (var component in root.GetComponentsInChildren<Component>(includeInactive: true))
@@ -158,23 +157,8 @@ namespace MyAssetManager
 
             if (assetUsages.Count == 0) return;
 
-            // Build file sets per product for efficient lookup
             var boothData = AssetLinkerStorage.Load();
             var asData    = AssetStoreStorage.Load();
-
-            var boothFileSets = boothData.products.Select(p => (
-                product: p,
-                files: new HashSet<string>(
-                    p.packages.SelectMany(pkg => pkg.files),
-                    System.StringComparer.OrdinalIgnoreCase)
-            )).ToList();
-
-            var asFileSets = asData.products.Select(p => (
-                product: p,
-                files: new HashSet<string>(
-                    p.packages.SelectMany(pkg => pkg.files),
-                    System.StringComparer.OrdinalIgnoreCase)
-            )).ToList();
 
             var resultMap = new Dictionary<string, ProductUsageResult>();
 
@@ -185,9 +169,23 @@ namespace MyAssetManager
 
                 ProductUsageResult matched = null;
 
-                foreach (var (product, files) in boothFileSets)
+                foreach (var product in boothData.products)
                 {
-                    if (!files.Contains(assetPath)) continue;
+                    bool found = false;
+                    foreach (var pkg in product.packages)
+                    {
+                        foreach (var f in pkg.files)
+                        {
+                            if (string.Equals(f, assetPath, System.StringComparison.OrdinalIgnoreCase))
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
+                    if (!found) continue;
+
                     if (!resultMap.TryGetValue(product.boothItemId, out matched))
                     {
                         matched = new ProductUsageResult
@@ -204,9 +202,23 @@ namespace MyAssetManager
 
                 if (matched == null)
                 {
-                    foreach (var (product, files) in asFileSets)
+                    foreach (var product in asData.products)
                     {
-                        if (!files.Contains(assetPath)) continue;
+                        bool found = false;
+                        foreach (var pkg in product.packages)
+                        {
+                            foreach (var f in pkg.files)
+                            {
+                                if (string.Equals(f, assetPath, System.StringComparison.OrdinalIgnoreCase))
+                                {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (found) break;
+                        }
+                        if (!found) continue;
+
                         if (!resultMap.TryGetValue(product.compositeId, out matched))
                         {
                             matched = new ProductUsageResult
@@ -222,7 +234,8 @@ namespace MyAssetManager
                     }
                 }
 
-                matched?.usages.AddRange(entries);
+                if (matched != null)
+                    matched.usages.AddRange(entries);
             }
         }
 

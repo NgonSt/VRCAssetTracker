@@ -8,7 +8,7 @@ namespace MyAssetManager
 {
     public class UsedProductsWindow : EditorWindow
     {
-        [MenuItem("Tools/MyAssetManager/使用商品を検索")]
+        [MenuItem("Tools/VRCAssetTracker/使用商品を検索")]
         static void Open() => GetWindow<UsedProductsWindow>("使用商品を検索");
 
         class UsageEntry

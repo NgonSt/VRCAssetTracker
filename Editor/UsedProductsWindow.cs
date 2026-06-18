@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace VRCAssetTracker
 {
@@ -76,7 +77,7 @@ namespace VRCAssetTracker
 
             if (_results == null)
             {
-                EditorGUILayout.HelpBox("Hierarchyでオブジェクトを選択して「検索する」を押してください。", MessageType.Info);
+                EditorGUILayout.HelpBox("Hierarchyでオブジェクトを選択して「選択を検索」、またはシーン全体を調べるには「シーン全体を検索」を押してください。", MessageType.Info);
                 return;
             }
 
@@ -108,9 +109,12 @@ namespace VRCAssetTracker
             GUILayout.FlexibleSpace();
 
             EditorGUI.BeginDisabledGroup(selected == null);
-            if (GUILayout.Button("検索する", EditorStyles.toolbarButton, GUILayout.Width(80)))
-                RunSearch(selected);
+            if (GUILayout.Button("選択を検索", EditorStyles.toolbarButton, GUILayout.Width(80)))
+                RunSearch(new[] { selected }, selected.name);
             EditorGUI.EndDisabledGroup();
+
+            if (GUILayout.Button("シーン全体を検索", EditorStyles.toolbarButton, GUILayout.Width(112)))
+                RunSearch(SceneManager.GetActiveScene().GetRootGameObjects(), "シーン全体");
 
             EditorGUILayout.EndHorizontal();
         }
@@ -209,47 +213,50 @@ namespace VRCAssetTracker
 
         // ── 検索 ──────────────────────────────────────────────────────────────
 
-        void RunSearch(GameObject root)
+        void RunSearch(GameObject[] roots, string label)
         {
             _results = new List<ProductUsageResult>();
-            _searchedObjectName = root != null ? root.name : string.Empty;
-            if (root == null) return;
+            _searchedObjectName = label;
 
             var assetUsages = new Dictionary<string, List<UsageEntry>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var component in root.GetComponentsInChildren<Component>(includeInactive: true))
+            foreach (var root in roots)
             {
-                if (component == null) continue;
-
-                string hierarchyPath = GetHierarchyPath(component.transform, root.transform);
-                string typeName      = component.GetType().Name;
-
-                var so   = new SerializedObject(component);
-                var prop = so.GetIterator();
-                bool enterChildren = true;
-                while (prop.Next(enterChildren))
+                if (root == null) continue;
+                foreach (var component in root.GetComponentsInChildren<Component>(includeInactive: true))
                 {
-                    enterChildren = true;
-                    if (prop.propertyType != SerializedPropertyType.ObjectReference)
-                        continue;
+                    if (component == null) continue;
 
-                    enterChildren = false;
-                    if (prop.objectReferenceValue == null) continue;
+                    string hierarchyPath = GetHierarchyPath(component.transform, root.transform);
+                    string typeName      = component.GetType().Name;
 
-                    string assetPath = AssetDatabase.GetAssetPath(prop.objectReferenceValue);
-                    if (string.IsNullOrEmpty(assetPath)) continue;
-
-                    var entry = new UsageEntry
+                    var so   = new SerializedObject(component);
+                    var prop = so.GetIterator();
+                    bool enterChildren = true;
+                    while (prop.Next(enterChildren))
                     {
-                        assetPath           = assetPath,
-                        hierarchyPath       = hierarchyPath,
-                        componentTypeName   = typeName,
-                        propertyDisplayName = prop.displayName
-                    };
+                        enterChildren = true;
+                        if (prop.propertyType != SerializedPropertyType.ObjectReference)
+                            continue;
 
-                    if (!assetUsages.TryGetValue(assetPath, out var list))
-                        assetUsages[assetPath] = list = new List<UsageEntry>();
-                    list.Add(entry);
+                        enterChildren = false;
+                        if (prop.objectReferenceValue == null) continue;
+
+                        string assetPath = AssetDatabase.GetAssetPath(prop.objectReferenceValue);
+                        if (string.IsNullOrEmpty(assetPath)) continue;
+
+                        var entry = new UsageEntry
+                        {
+                            assetPath           = assetPath,
+                            hierarchyPath       = hierarchyPath,
+                            componentTypeName   = typeName,
+                            propertyDisplayName = prop.displayName
+                        };
+
+                        if (!assetUsages.TryGetValue(assetPath, out var list))
+                            assetUsages[assetPath] = list = new List<UsageEntry>();
+                        list.Add(entry);
+                    }
                 }
             }
 
